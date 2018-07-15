@@ -1,0 +1,17 @@
+{% extends "main.html" %} {% block content %} {% include "header.html" %}
+
+<div class="row">
+  <div class="col-md-4">
+    <h3>Categories</h3>
+    {% include "categories.html" %}
+  </div>
+  <div class="col-md-8">
+    <div class="latest-items">
+      <h3>Latest Items</h3>
+      {% for item in latest_items %}
+      <a href="{{url_for('item_description', catalog_name = item[1].name, item_name=item[0].title)}}">{{item[0].title}} ({{item[1].name}})</a>
+      <br />{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
