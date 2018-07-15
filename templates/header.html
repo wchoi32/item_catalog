@@ -5,7 +5,15 @@
     </h1>
   </div>
   <div class="col-md-6 text-right">
-    <h3>Login Button</h3>
+    {% if 'username' not in session %}
+    <h3>
+      <a href="{{url_for('login')}}">Login</a>
+    </h3>
+    {% else %}
+    <h3>
+      <a href="{{url_for('gdisconnect')}}">Logout</a>
+    </h3>
+    {% endif %}
   </div>
   <div class="col-md-12">
     <hr>
