@@ -1,4 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
+from flask import (Flask,
+                   render_template,
+                   url_for,
+                   jsonify,
+                   flash,
+                   make_response,
+                   request,
+                   redirect)
 from sqlalchemy import create_engine, asc, desc
 from sqlalchemy.orm import sessionmaker, scoped_session
 from database_setup import Base, Category, CategoryItem, User
@@ -9,7 +16,6 @@ from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 import httplib2
 import json
-from flask import make_response
 import requests
 
 app = Flask(__name__)
@@ -29,8 +35,14 @@ session = scoped_session(DBSession)
 @app.route('/catalog/')
 def showCatalogs():
     categories = session.query(Category).order_by(asc(Category.name)).all()
-    latest_items = session.query(CategoryItem, Category).join(
-        Category, CategoryItem.cat_id == Category.id).order_by(desc(CategoryItem.id)).all()
+    latest_items = (
+        session.query(
+            CategoryItem, Category
+        )
+        .join(Category, CategoryItem.cat_id == Category.id)
+        .order_by(desc(CategoryItem.id)).all()
+    )
+
     if 'username' not in login_session:
         return render_template('publicLatestItems.html',
                                categories=categories,
@@ -151,8 +163,8 @@ def gconnect():
     stored_access_token = login_session.get('access_token')
     stored_gplus_id = login_session.get('gplus_id')
     if stored_access_token is not None and gplus_id == stored_gplus_id:
-        response = make_response(json.dumps('Current user is already connected.'),
-                                 200)
+        response = make_response(json.dumps(
+            'Current user is already connected.'), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -204,7 +216,7 @@ def getUserID(email):
     try:
         user = session.query(User).filter_by(email=email).one()
         return user.id
-    except:
+    except BaseException:
         return None
 
 
@@ -225,7 +237,11 @@ def gdisconnect():
         del login_session['gplus_id']
         del login_session['username']
         del login_session['email']
-        return "<script>function myFunction() {alert('Successfully Disconnected');setTimeout(function () {window.location.href = '/catalog';}, 100);}</script><body onload='myFunction()''>"
+        return ("<script>function myFunction()"
+                "{alert('Successfully Disconnected');"
+                "setTimeout(function () {window.location.href"
+                "= '/catalog';}, 100);}</script>"
+                "<body onload='myFunction()''>")
     else:
         response = make_response(json.dumps(
             'Failed to revoke token for given user.'), 400)
