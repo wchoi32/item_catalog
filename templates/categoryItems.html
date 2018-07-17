@@ -1,5 +1,4 @@
 {% extends "main.html" %} {% block content %} {% include "header.html" %}
-
 <div class="row">
   <div class="col-md-4">
     <h3>Categories</h3>
@@ -9,7 +8,7 @@
     <div class="category-items">
       <h3>{{category_name}} Items ({{category_count}} items)</h3>
       {% for item in category_items %}
-      <a href="{{url_for('item_description', catalog_name = category_name, item_name=item.title)}}">{{item.title}}</a>
+      <a href="{{url_for('itemDescription', catalog_name = category_name, item_name=item.title)}}">{{item.title}}</a>
       <br />{% endfor %}
     </div>
   </div>

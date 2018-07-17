@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from sqlalchemy import create_engine, asc, desc
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from database_setup import Base, Category, CategoryItem, User
 from flask import session as login_session
 import random
@@ -22,24 +22,28 @@ engine = create_engine('sqlite:///itemcatalog.db')
 Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
-session = DBSession()
+session = scoped_session(DBSession)
 
 
 @app.route('/')
 @app.route('/catalog/')
-def show_catalogs():
+def showCatalogs():
     categories = session.query(Category).order_by(asc(Category.name)).all()
     latest_items = session.query(CategoryItem, Category).join(
         Category, CategoryItem.cat_id == Category.id).order_by(desc(CategoryItem.id)).all()
-
-    return render_template('latestItems.html',
-                           categories=categories,
-                           latest_items=latest_items)
+    if 'username' not in login_session:
+        return render_template('publicLatestItems.html',
+                               categories=categories,
+                               latest_items=latest_items)
+    else:
+        return render_template('latestItems.html',
+                               categories=categories,
+                               latest_items=latest_items)
 
 
 @app.route('/catalog/<path:catalog_name>/')
 @app.route('/catalog/<path:catalog_name>/items')
-def show_catalog_items(catalog_name):
+def showCatalogItems(catalog_name):
     categories = session.query(Category).order_by(asc(Category.name)).all()
     category_selected = session.query(
         Category).filter_by(name=catalog_name).one()
@@ -56,15 +60,19 @@ def show_catalog_items(catalog_name):
 
 
 @app.route('/catalog/<path:catalog_name>/<path:item_name>')
-def item_description(catalog_name, item_name):
+def itemDescription(catalog_name, item_name):
     item_description = session.query(
         CategoryItem).filter_by(title=item_name).one()
-    return render_template('itemDescription.html',
-                           item_description=item_description)
+    if item_description.user_id == login_session['user_id']:
+        return render_template('itemDescription.html',
+                               item_description=item_description)
+    else:
+        return render_template('publicItemDescription.html',
+                               item_description=item_description)
 
 
 @app.route('/catalog.json')
-def catalog_json():
+def catalogJSON():
     all_categories_items = []
     categories = session.query(Category).all()
     for category in categories:
@@ -217,18 +225,84 @@ def gdisconnect():
         del login_session['gplus_id']
         del login_session['username']
         del login_session['email']
-        response = make_response(json.dumps(
-            'Successfully disconnected. '), 200)
-        response.headers['Content-Type'] = 'application/json'
-        return response
+        return "<script>function myFunction() {alert('Successfully Disconnected');setTimeout(function () {window.location.href = '/catalog';}, 100);}</script><body onload='myFunction()''>"
     else:
         response = make_response(json.dumps(
             'Failed to revoke token for given user.'), 400)
         response.headers['Content-Type'] = 'application/json'
         return response
 
+# Add new item
+
+
+@app.route('/catalog/new/', methods=['GET', 'POST'])
+def newItem():
+    if 'username' not in login_session:
+        return redirect('/login')
+    if request.method == 'POST':
+        newItem = CategoryItem(title=request.form['title'],
+                               description=request.form['description'],
+                               cat_id=request.form['category'],
+                               user_id=login_session['user_id'])
+        session.add(newItem)
+        session.commit()
+        flash('New Item %s Successfully Created' % (newItem.title))
+        return redirect(url_for('showCatalogs'))
+    else:
+        categories = session.query(Category).order_by(asc(Category.name)).all()
+        return render_template('newItem.html',
+                               categories=categories)
+
+# Edit item
+
+
+@app.route('/catalog/<path:item_name>/edit', methods=['GET', 'POST'])
+def editItem(item_name):
+    editedItem = session.query(
+        CategoryItem).filter_by(title=item_name).one()
+    if 'username' not in login_session:
+        return redirect('/login')
+    if editedItem.user_id != login_session['user_id']:
+        flash('You are not authorized to edit this item!')
+        return redirect(url_for('showCatalogs'))
+    if request.method == 'POST':
+        if request.form['title']:
+            editedItem.title = request.form['title']
+        if request.form['description']:
+            editedItem.description = request.form['description']
+        if request.form['category']:
+            editedItem.cat_id = request.form['category']
+        session.add(editedItem)
+        session.commit()
+        flash('Edited Item %s Successfully Created' % (editedItem.title))
+        return redirect(url_for('showCatalogs'))
+    else:
+        categories = session.query(Category).order_by(asc(Category.name)).all()
+        return render_template('editItem.html',
+                               categories=categories)
+
+# Delete item
+
+
+@app.route('/catalog/<path:item_name>/delete', methods=['GET', 'POST'])
+def deleteItem(item_name):
+    deleteItem = session.query(
+        CategoryItem).filter_by(title=item_name).one()
+    if 'username' not in login_session:
+        return redirect('/login')
+    if deleteItem.user_id != login_session['user_id']:
+        flash('You are not authorized to delete this item!')
+        return redirect(url_for('showCatalogs'))
+    if request.method == 'POST':
+        session.delete(deleteItem)
+        session.commit()
+        flash('Deleted Item %s' % item_name)
+        return redirect(url_for('showCatalogs'))
+    else:
+        return render_template('deleteItem.html')
+
 
 if __name__ == '__main__':
     app.secret_key = 'secret_key'
-    app.debug = False
+    app.debug = True
     app.run(host='0.0.0.0', port=3000)

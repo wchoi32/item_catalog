@@ -1,9 +1,22 @@
 {% extends "main.html" %} {% block content %} {% include "header.html" %}
-
 <div class="row">
-  <div class="col-md-12 item-description">
-    <h3>{{item_description.title}}</h3>
-    <p>{{item_description.description}}</p>
+  <div class="row">
+    <div class="col-md-12 item-description">
+      <h3>{{item_description.title}}</h3>
+      <p>{{item_description.description}}</p>
+    </div>
+  </div>
+  <div class="row padding-top padding-bottom">
+    <div class="col-md-1"></div>
+    <div class="col-md-11 padding-none">
+      <a href="{{url_for('editItem', item_name = item_description.title)}}">
+        Edit
+      </a>
+      |
+      <a href="{{url_for('deleteItem', item_name = item_description.title )}}">
+        Delete
+      </a>
+    </div>
   </div>
 </div>
 {% endblock %}
