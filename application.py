@@ -82,7 +82,7 @@ def showCatalogItems(catalog_name):
 def itemDescription(catalog_name, item_name):
     item_description = session.query(
         CategoryItem).filter_by(title=item_name).one()
-    if item_description.user_id == login_session['user_id']:
+    if 'username' in login_session and item_description.user_id == login_session['user_id']:
         return render_template('itemDescription.html',
                                item_description=item_description)
     else:
@@ -251,6 +251,7 @@ def gdisconnect():
         del login_session['access_token']
         del login_session['gplus_id']
         del login_session['username']
+        del login_session['user_id']
         del login_session['email']
         return ("<script>function myFunction()"
                 "{alert('Successfully Disconnected');"
