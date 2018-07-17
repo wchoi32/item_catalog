@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from flask import (Flask,
                    render_template,
                    url_for,
@@ -30,6 +31,8 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = scoped_session(DBSession)
 
+# Main Homepage
+
 
 @app.route('/')
 @app.route('/catalog/')
@@ -52,6 +55,8 @@ def showCatalogs():
                                categories=categories,
                                latest_items=latest_items)
 
+# Read Catalogs and Items Under that Catalog
+
 
 @app.route('/catalog/<path:catalog_name>/')
 @app.route('/catalog/<path:catalog_name>/items')
@@ -70,6 +75,8 @@ def showCatalogItems(catalog_name):
                            category_name=catalog_name,
                            category_items=category_items)
 
+# Read Item Description
+
 
 @app.route('/catalog/<path:catalog_name>/<path:item_name>')
 def itemDescription(catalog_name, item_name):
@@ -81,6 +88,8 @@ def itemDescription(catalog_name, item_name):
     else:
         return render_template('publicItemDescription.html',
                                item_description=item_description)
+
+# Read JSON
 
 
 @app.route('/catalog.json')
@@ -99,6 +108,8 @@ def catalogJSON():
         all_categories_items.append(each_catalog)
     return jsonify(Category=all_categories_items)
 
+# Login Page
+
 
 @app.route('/login')
 def login():
@@ -106,6 +117,8 @@ def login():
                     for x in range(32))
     login_session['state'] = state
     return render_template('login.html', STATE=state)
+
+# Authentication Via Google
 
 
 @app.route('/gconnect', methods=['POST'])
@@ -218,6 +231,8 @@ def getUserID(email):
         return user.id
     except BaseException:
         return None
+
+# Disconnect / Logout
 
 
 @app.route('/gdisconnect')
