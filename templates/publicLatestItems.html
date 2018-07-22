@@ -12,7 +12,7 @@
         <div class="col-md-11">
           <h3>Latest Items</h3>
           {% for item in latest_items %}
-          <a href="{{url_for('itemDescription', catalog_name = item[1].name, item_name=item[0].title)}}">{{item[0].title}} ({{item[1].name}})</a>
+          <a href="{{url_for('itemDescription', catalog_name = item[1].name, item_id=item[0].id)}}">{{item[0].title}} ({{item[1].name}})</a>
           <br />{% endfor %}
         </div>
       </div>

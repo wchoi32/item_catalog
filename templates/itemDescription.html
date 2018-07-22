@@ -9,11 +9,11 @@
   <div class="row padding-top padding-bottom">
     <div class="col-md-1"></div>
     <div class="col-md-11 padding-none">
-      <a href="{{url_for('editItem', item_name = item_description.title)}}">
+      <a href="{{url_for('editItem', item_id = item_description.id)}}">
         Edit
       </a>
       |
-      <a href="{{url_for('deleteItem', item_name = item_description.title )}}">
+      <a href="{{url_for('deleteItem', item_id = item_description.id)}}">
         Delete
       </a>
     </div>

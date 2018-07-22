@@ -18,6 +18,7 @@ from oauth2client.client import FlowExchangeError
 import httplib2
 import json
 import requests
+from functools import wraps
 
 app = Flask(__name__)
 
@@ -37,6 +38,12 @@ session = scoped_session(DBSession)
 @app.route('/')
 @app.route('/catalog/')
 def showCatalogs():
+    """
+    method/class name: Show available catalogs
+    Args: NAN
+    Returns: 
+        return all catalogs available
+    """
     categories = session.query(Category).order_by(asc(Category.name)).all()
     latest_items = (
         session.query(
@@ -61,6 +68,13 @@ def showCatalogs():
 @app.route('/catalog/<path:catalog_name>/')
 @app.route('/catalog/<path:catalog_name>/items')
 def showCatalogItems(catalog_name):
+    """
+    method/class name: show items for one catalog
+    Args:
+        catalog_name: name of the catalog selected
+    Returns:
+        return all items under that catalog
+    """
     categories = session.query(Category).order_by(asc(Category.name)).all()
     category_selected = session.query(
         Category).filter_by(name=catalog_name).one()
@@ -78,10 +92,10 @@ def showCatalogItems(catalog_name):
 # Read Item Description
 
 
-@app.route('/catalog/<path:catalog_name>/<path:item_name>')
-def itemDescription(catalog_name, item_name):
+@app.route('/catalog/<path:catalog_name>/<int:item_id>')
+def itemDescription(catalog_name, item_id):
     item_description = session.query(
-        CategoryItem).filter_by(title=item_name).one()
+        CategoryItem).filter_by(id=item_id).one()
     if 'username' in login_session and item_description.user_id == login_session['user_id']:
         return render_template('itemDescription.html',
                                item_description=item_description)
@@ -94,6 +108,12 @@ def itemDescription(catalog_name, item_name):
 
 @app.route('/catalog.json')
 def catalogJSON():
+    """
+    method/class name: All catalogs and items JSON
+    Args: NAN
+    Returns: JSON of all categories and items
+
+    """
     all_categories_items = []
     categories = session.query(Category).all()
     for category in categories:
@@ -107,6 +127,22 @@ def catalogJSON():
 
         all_categories_items.append(each_catalog)
     return jsonify(Category=all_categories_items)
+
+
+@app.route('/catalog/<path:catalog_name>/<int:item_id>/JSON')
+def itemJSON(catalog_name, item_id):
+    one_item = session.query(CategoryItem).filter_by(id=item_id).one()
+    return jsonify(One_Item=one_item.serialize)
+
+
+@app.route('/catalog/<path:catalog_name>/JSON')
+def categoryJSON(catalog_name):
+    category_selected = session.query(
+        Category).filter_by(name=catalog_name).one()
+    category_items = session.query(
+        CategoryItem).filter_by(cat_id=category_selected.id).all()
+    return jsonify(Catalog_Item=[i.serialize for i in category_items])
+
 
 # Login Page
 
@@ -264,13 +300,25 @@ def gdisconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
 
+# Check user login status function decorator
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' in login_session:
+            return f(*args, **kwargs)
+        else:
+            flash("You are not authorized for access there")
+            return redirect('/login')
+    return decorated_function
+
 # Add new item
 
 
 @app.route('/catalog/new/', methods=['GET', 'POST'])
+@login_required
 def newItem():
-    if 'username' not in login_session:
-        return redirect('/login')
     if request.method == 'POST':
         newItem = CategoryItem(title=request.form['title'],
                                description=request.form['description'],
@@ -288,12 +336,18 @@ def newItem():
 # Edit item
 
 
-@app.route('/catalog/<path:item_name>/edit', methods=['GET', 'POST'])
-def editItem(item_name):
-    editedItem = session.query(
-        CategoryItem).filter_by(title=item_name).one()
-    if 'username' not in login_session:
-        return redirect('/login')
+@app.route('/catalog/<int:item_id>/edit', methods=['GET', 'POST'])
+@login_required
+def editItem(item_id):
+    """
+    method/class name: edit selected item
+    Args:
+        item_id: selected item's ID
+    Returns:
+        edit item in DB and return to main page
+    """
+    editedItem = session.query(CategoryItem).filter_by(id=item_id).one()
+
     if editedItem.user_id != login_session['user_id']:
         flash('You are not authorized to edit this item!')
         return redirect(url_for('showCatalogs'))
@@ -316,19 +370,26 @@ def editItem(item_name):
 # Delete item
 
 
-@app.route('/catalog/<path:item_name>/delete', methods=['GET', 'POST'])
-def deleteItem(item_name):
+@app.route('/catalog/<int:item_id>/delete', methods=['GET', 'POST'])
+@login_required
+def deleteItem(item_id):
+    """
+    method/class name: Delete selected item
+    Args:
+        item_id: id of the selected item
+    Returns:
+        redirect page, deleted item
+    """
     deleteItem = session.query(
-        CategoryItem).filter_by(title=item_name).one()
-    if 'username' not in login_session:
-        return redirect('/login')
+        CategoryItem).filter_by(id=item_id).one()
+
     if deleteItem.user_id != login_session['user_id']:
         flash('You are not authorized to delete this item!')
         return redirect(url_for('showCatalogs'))
     if request.method == 'POST':
         session.delete(deleteItem)
         session.commit()
-        flash('Deleted Item %s' % item_name)
+        flash('Deleted Item %s' % item_id)
         return redirect(url_for('showCatalogs'))
     else:
         return render_template('deleteItem.html')
